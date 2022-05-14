@@ -1,0 +1,71 @@
+[package]
+name = "rust-tsp"
+version = "0.1.0"
+authors = ["tanakanotarou2 <sotaime+gh@gmail.com>"]
+edition = "2018"
+
+
+[[bin]]
+name = "console"
+path = "src/main.rs"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["console_error_panic_hook"]
+local = []
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
+#wasm-bindgen = "0.2.63"
+#serde = { version = "1.0", features = ["derive"] }
+# 乱数
+rand = { version = "=0.7.3", features = ["small_rng"] }
+rand_pcg = "=0.2.1"
+#getrandom = "=0.1.14"
+#rand_chacha = "=0.2.2"
+#rand_core = "=0.5.1"
+#rand_hc = "=0.2.0"
+
+# イテレータの拡張
+itertools = "=0.9.0"
+
+
+# 高速なハッシュ関数
+#rustc-hash = "=1.1.0"
+
+# 競技プログラミングの入出力サポートその1
+proconio = { version = "=0.3.6", features = ["derive"] }
+
+# The `console_error_panic_hook` crate provides better debugging of panics by
+# logging them with `console.error`. This is great for development, but requires
+# all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
+# code size when deploying.
+console_error_panic_hook = { version = "0.1.6", optional = true }
+
+# `wee_alloc` is a tiny allocator for wasm that is only ~1K in code size
+# compared to the default allocator's ~10K. It is slower than the default
+# allocator, however.
+#
+# Unfortunately, `wee_alloc` requires nightly Rust when targeting wasm for now.
+wee_alloc = { version = "0.4.5", optional = true }
+
+# std::time の代わり
+# https://github.com/sebcrozet/instant
+instant = { version = "0.1", features = ["wasm-bindgen", "inaccurate"] }
+
+[dependencies.web-sys]
+version = "0.3.57"
+features = [
+    'Performance', ]
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3.13"
+
+
+[profile.release]
+# Tell `rustc` to optimize for small code size.
+opt-level = "s"
+

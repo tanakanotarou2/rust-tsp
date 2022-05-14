@@ -1,0 +1,59 @@
+.container {
+    min-width: 800px;
+    display: flex;
+    justify-content: center;
+}
+
+.container textarea {
+    width: 250px;
+    height: 100px;
+}
+
+.input label {
+    font-size: 1rem;
+    /*display: block;*/
+}
+
+.output {
+    margin-top: 10px;
+}
+
+.output label {
+    font-size: 1rem;
+    display: block;
+}
+
+.solver {
+    margin-left: 20px;
+}
+
+.solver label {
+    display: block;
+    padding: 5px;
+    margin: 5px;
+    text-align: left;
+}
+
+.solver h3 {
+    font-size: 1rem;
+}
+
+.canvas-header {
+    display: flex;
+    justify-content: space-between;
+    margin: 10px auto;
+    width: 400px;
+}
+
+.canvas-header .label {
+    padding: 2px 5px;
+    margin-right: 10px;
+    background-color: white;
+    color: black;
+    min-width: 150px;
+}
+
+.canvas-header input {
+    margin-top: 2px;
+    width: 50px;
+}
