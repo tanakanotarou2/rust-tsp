@@ -5,16 +5,11 @@ import {useMountEffect} from "./utils";
 
 import {Network} from "vis-network";
 
-type ProblemResult = {
-    squares: Array<Array<number>> | null
-    width: number
-    height: number
-}
 
 const nodes = [
-    {id: 1, label:'1',  x:0, y:0},
-    {id: 2, label:'2', fixed:true, x:100, y:500},
-    {id: 3, title:'test'},
+    {id: 1, label: '1', x: 0, y: 0},
+    {id: 2, label: '2', fixed: true, x: 100, y: 500},
+    {id: 3, title: 'test'},
     {id: 4},
     {id: 5},
 ];
@@ -27,16 +22,51 @@ const edges = [
     {from: 3, to: 3},
 ];
 const options = {
-    nodes:{
-        size:12,
-        shape:'dot',
-        fixed:true,
+    nodes: {
+        size: 3,
+        shape: 'dot',
+        fixed: true,
     },
-    edges:{
-    arrows:'to'
-    , smooth:false
+    edges: {
+        smooth: false
     }
 };
+
+const parseInputText = (txt: string) => {
+    const lines = txt.trim().split("\n")
+    const n = parseInt(lines[0].trim())
+    let positions = lines.slice(1).map(v => v.split(" ").map(v => parseInt(v)))
+    return {
+        n,
+        positions
+    }
+}
+
+
+const parseOutputText = (txt: string) => {
+    const lines = txt.trim().split("\n")
+
+    let i = 0;
+    let steps = [];
+    lines.forEach(v => {
+        let line = v.trim();
+        if (line.length == 0) {
+            return
+        }
+        if (line.startsWith('#')) {
+            if (steps.length > 0) {
+                steps[steps.length - 1].comments.push(line)
+            }
+        } else {
+            steps.push({
+                step: steps.length,
+                path: line.split(" ").map(v => parseInt(v)),
+                comments: [],
+            })
+        }
+    })
+    return steps;
+}
 
 /**
  * 全体的な管理を行う
@@ -50,10 +80,37 @@ const Container = () => {
     // const [problemResult, setProblemResult] = useState<ProblemResult>({squares: null, width: 0, height: 0})
     const [inputValue, setInputValue] = useState<string>("")
     const [outputValue, setOutputValue] = useState<string>("")
+    const [network, setNetwork] = useState<any>(null)
+    const [nodes, setNodes] = useState<any>(null)
 
     // const [selAlgo, setSelAlgo] = useState<string>("NF");
     // const [scale, setScale] = useState<number>(1.0);
     const visJsRef = useRef(null);
+
+    const renderPath = (path) => {
+        if (!network) return;
+        let edges = []
+        for (let i = 1; i < path.length; i++) {
+            edges.push({from: path[i - 1], to: path[i]})
+        }
+        // console.log(network)
+        // console.log(network.nodes)
+        network.setData({edges, nodes})
+    }
+    const initNetwork = (inputData: Array<any>) => {
+        try {
+            const nodes = inputData.map((v, id) => {
+                return {id, label: id.toString(), x: v[0], y: v[1]}
+            })
+            const network =
+                visJsRef.current &&
+                new Network(visJsRef.current, {nodes, edges: []}, options);
+            setNetwork(network)
+            setNodes(nodes)
+        } catch (e) {
+            console.log(e)
+        }
+    }
 
     const runSolver = () => {
     }
@@ -63,15 +120,23 @@ const Container = () => {
         // setInputValue(txt)
     }
 
-    useEffect(() => {
-        const network =
-            visJsRef.current &&
-            new Network(visJsRef.current, {nodes, edges}, options);
-    }, [visJsRef])
+    // useEffect(() => {
+    //     // const network =
+    //     //     visJsRef.current &&
+    //     //     new Network(visJsRef.current, {nodes, edges}, options);
+    //     // setNetwork(network)
+    // }, [visJsRef])
+
 
     const handleChangeInput = (event) => {
+        setInputValue(event.target.value)
+        let data = parseInputText(event.target.value)
+        initNetwork(data.positions)
     }
     const handleChangeOutput = (event) => {
+        setOutputValue(event.target.value)
+        let steps = parseOutputText(event.target.value)
+        renderPath(steps[0].path)
     }
 
     const input_placeholder = "N \nx1 y1\nx2 y2"

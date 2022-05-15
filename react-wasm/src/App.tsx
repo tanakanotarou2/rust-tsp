@@ -13,7 +13,7 @@ function App() {
                 <h2>参考</h2>
                 <ul>
                     <li>
-                        <cite>梅谷俊治, アルゴリズム実装を教える, オペレーションズ・リサーチ, 59 (2014), 615-621. (http://www.orsj.or.jp/archive2/or59-10/or59_10_615.pdf)</cite>
+                        <cite>梅谷俊治, 巡回セールスマン問題に対する近似解法 (https://sites.google.com/site/shunjiumetani/software-jp)</cite>
                     </li>
                 </ul>
             </div>
