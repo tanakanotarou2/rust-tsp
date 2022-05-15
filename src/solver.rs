@@ -9,9 +9,8 @@ use rand::prelude::{IteratorRandom, SliceRandom};
 use proconio::{*};
 use rand::Rng;
 use crate::mat;
-use crate::procon_utils::SetMinMax;
+use crate::procon_utils::{SetMinMax};
 use crate::procon_utils::Timer;
-
 
 /// 座標を表す構造体
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -30,6 +29,7 @@ impl P {
     }
 }
 
+
 #[derive(Clone, Debug)]
 pub struct Input {
     pub n: usize,
@@ -46,17 +46,33 @@ fn parse_input() -> Input {
 
 fn calc_score(path: &Vec<P>) -> f64 {
     let mut tot = 0.0;
-    for i in 1..path.len() {
-        tot += path[i - 1].dist(path[i])
+    for i in 0..path.len() {
+        tot += path[i].dist(path[(i + 1) % path.len()])
     }
-    tot + path[0].dist(path[path.len() - 1])
+    tot
+}
+
+fn path_to_idx(input: &Input, path: &Vec<P>) -> Vec<usize> {
+    let mut used = vec![false; input.n];
+    let mut res = vec![];
+    for (j, v) in path.iter().enumerate() {
+        for (i, u) in input.p.iter().enumerate() {
+            if used[i] { continue; }
+            if *u == *v {
+                res.push(i);
+                used[i] = true;
+                break;
+            }
+        }
+    }
+    res
 }
 
 /**
  * Nearest Neighbor法
  * 最初に任意の出発点を適当に選び、現在いる都市から最も近い都市を選んで移動する
  */
-pub fn nearest_neighbor_solver(input: &Input) -> Vec<P> {
+pub fn nearest_neighbor_solver(input: &Input) -> Vec<usize> {
     let mut rng = rand_pcg::Pcg64Mcg::new(48);
     let N = input.n;
     let pos = input.p.clone();
@@ -84,27 +100,20 @@ pub fn nearest_neighbor_solver(input: &Input) -> Vec<P> {
         let score = calc_score(&path);
         if best.0 > score {
             best = (score, path);
-            eprintln!("best score:{}",score);
+            eprintln!("best score:{}", score);
         }
     }
-    best.1
+    println!("{:?}",best.1);
+    path_to_idx(&input, &best.1)
 }
 
 pub fn main2() {
+    let input = parse_input();
     let st = Timer::get_time();
-    // let input = parse_input();
-    // println!("{:?}", input);
-    let mut rng = rand_pcg::Pcg64Mcg::new(48);
-    let mut pos = vec![];
-    for _ in 0..10 {
-        let x = rng.gen_range(0, 100);
-        let y = rng.gen_range(0, 100);
-        pos.push(P(x, y));
-    }
-    let input = Input { n: pos.len(), p: pos };
     let res = nearest_neighbor_solver(&input);
     for p in res {
-        println!("{} {}", p.0, p.1);
+        print!("{} ", p);
     }
+    println!();
 }
 

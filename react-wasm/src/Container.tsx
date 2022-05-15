@@ -3,6 +3,8 @@ import './Container.css';
 
 import {useMountEffect} from "./utils";
 
+import init, {NN_solver} from "rust-tsp";
+
 import {Network} from "vis-network";
 
 /* グラフ設定 */
@@ -74,9 +76,9 @@ const generateRandomDataset = (num: number) => {
 
 const calcDist = (nodes, path) => {
     let dist = 0.0;
-    for (let i = 0; i < path.length - 1; i++) {
+    for (let i = 0; i < path.length; i++) {
         let u = nodes[path[i]];
-        let v = nodes[path[i + 1]];
+        let v = nodes[path[(i + 1)%path.length]];
         dist += Math.sqrt((u.x - v.x) * (u.x - v.x) + (u.y - v.y) * (u.y - v.y));
     }
     return Math.floor(dist * 100) / 100;
@@ -100,18 +102,20 @@ const Container = () => {
     const [stepNo, setStepNo] = useState<number>(0)
     const currentState = () => steps[stepNo]
 
-    // const [selAlgo, setSelAlgo] = useState<string>("NF");
+    const [selAlgo, setSelAlgo] = useState<string>("NN");
     const visJsRef = useRef(null);
 
 
     const renderPath = (path) => {
         if (!network) return;
         let edges = []
-        for (let i = 1; i < path.length; i++) {
-            if (path[i - 1] >= 0 && path[i - 1] < nodes.length && path[i] >= 0 && path[i] < nodes.length) {
+        for (let i = 0; i < path.length; i++) {
+            let u=i;
+            let v=(i+1)%path.length;
+            if (path[u] >= 0 && path[u] < nodes.length && path[v] >= 0 && path[v] < nodes.length) {
                 edges.push({
-                    from: path[i - 1],
-                    to: path[i]
+                    from: path[u],
+                    to: path[v]
                 })
             } else {
                 return;
@@ -141,6 +145,20 @@ const Container = () => {
     }
 
     const runSolver = () => {
+        setPlayFlg(false)
+
+        const inp = parseInputText(inputValue);
+        const algo = selAlgo;
+        const algoFnc = {
+            NN: NN_solver,
+        }
+        init().then(() => {
+            const res = algoFnc[algo](inp);
+            const txt = res.path.join(" ")
+            changeOutput(txt);
+        }).catch((e) => {
+            console.log(e)
+        })
     }
 
     const changeStep = (steps, step) => {
@@ -189,13 +207,22 @@ const Container = () => {
 
         setPlayFlg(false)
     }
+
+    const changeOutput = (txt: string) => {
+        let steps = parseOutputText(txt)
+        setSteps(steps)
+        if (steps.length > stepNo) {
+            changeStep(steps, stepNo)
+        } else {
+            changeStep(steps, 0)
+            setStepNo(0)
+        }
+    }
     const handleChangeOutput = (event) => {
         setOutputValue(event.target.value)
-        let steps = parseOutputText(event.target.value)
-        setSteps(steps)
-        changeStep(steps, stepNo)
-
         setPlayFlg(false)
+
+        changeOutput(event.target.value)
     }
 
     const handleChangeStep = (event) => {
@@ -217,6 +244,7 @@ const Container = () => {
         try {
             return calcDist(nodes, currentState().path)
         } catch (e) {
+            console.log(e)
             return -1
         }
     }
@@ -251,41 +279,41 @@ const Container = () => {
                         ></textarea>
                     </div>
                 </div>
-                {/*<div className="solver">*/}
-                {/*    <h3>ソルバー</h3>*/}
-                {/*    <label>*/}
-                {/*        <input*/}
-                {/*            name="algo"*/}
-                {/*            type="radio"*/}
-                {/*            onChange={() => changeAlgo("NF")}*/}
-                {/*            value="NF"*/}
-                {/*            checked={selAlgo === "NF"}*/}
-                {/*        />*/}
-                {/*        NF法*/}
-                {/*    </label>*/}
-                {/*    <label>*/}
-                {/*        <input*/}
-                {/*            name="algo"*/}
-                {/*            type="radio"*/}
-                {/*            value="NFDH"*/}
-                {/*            checked={selAlgo === "NFDH"}*/}
-                {/*            onChange={() => changeAlgo("NFDH")}*/}
-                {/*        />*/}
-                {/*        NFDH法*/}
-                {/*    </label>*/}
-                {/*    <label>*/}
-                {/*        <input*/}
-                {/*            name="algo"*/}
-                {/*            type="radio"*/}
-                {/*            value="BLF"*/}
-                {/*            checked={selAlgo === "BLF"}*/}
-                {/*            onChange={() => changeAlgo("BLF")*/}
-                {/*            }*/}
-                {/*        />*/}
-                {/*        BLF法*/}
-                {/*    </label>*/}
-                {/*    <button onClick={runSolver}>ソルバー実行</button>*/}
-                {/*</div>*/}
+                <div className="solver">
+                    <h3>ソルバー</h3>
+                    <label>
+                        <input
+                            name="algo"
+                            type="radio"
+                            onChange={() => setSelAlgo("NN")}
+                            value="NN"
+                            checked={selAlgo === "NN"}
+                        />
+                        Nearest Neighbor 法
+                    </label>
+                    {/*<label>*/}
+                    {/*    <input*/}
+                    {/*        name="algo"*/}
+                    {/*        type="radio"*/}
+                    {/*        value="NFDH"*/}
+                    {/*        checked={selAlgo === "NFDH"}*/}
+                    {/*        onChange={() => changeAlgo("NFDH")}*/}
+                    {/*    />*/}
+                    {/*    NFDH法*/}
+                    {/*</label>*/}
+                    {/*<label>*/}
+                    {/*    <input*/}
+                    {/*        name="algo"*/}
+                    {/*        type="radio"*/}
+                    {/*        value="BLF"*/}
+                    {/*        checked={selAlgo === "BLF"}*/}
+                    {/*        onChange={() => changeAlgo("BLF")*/}
+                    {/*        }*/}
+                    {/*    />*/}
+                    {/*    BLF法*/}
+                    {/*</label>*/}
+                    <button onClick={runSolver}>ソルバー実行</button>
+                </div>
             </div>
             {/* end left panel */}
             <div>

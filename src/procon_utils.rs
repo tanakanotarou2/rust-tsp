@@ -1,4 +1,3 @@
-
 /// chmin, chmax 関数
 pub trait SetMinMax {
     fn chmin(&mut self, v: Self) -> bool;
@@ -57,9 +56,4 @@ impl Timer {
         }
     }
 }
-
-
-
-
-
 
