@@ -42,7 +42,7 @@
     display: flex;
     justify-content: space-between;
     margin: 10px auto;
-    width: 400px;
+    width: 800px;
 }
 
 .canvas-header .label {
@@ -56,4 +56,11 @@
 .canvas-header input {
     margin-top: 2px;
     width: 50px;
+
+}
+
+.canvas-body{
+    background: white;
+    max-width: 800px;
+    margin:0 auto;
 }

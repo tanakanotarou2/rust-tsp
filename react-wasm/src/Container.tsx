@@ -1,65 +1,85 @@
 import {useContext, useEffect, useRef, useState} from "react";
-import Canvas from "./Canvas";
 import './Container.css';
 
-import init, {NF_solve, NFDH_solve, BLF_solve} from "rust-tsumekomi";
 import {useMountEffect} from "./utils";
 
-type ProblemResult = {
-    squares: Array<Array<number>> | null
-    width: number
-    height: number
-}
+import {Network} from "vis-network";
 
-const generate_random_dataset = (num: number, width: number) => {
-    let sq = [];
+/* グラフ設定 */
+const options = {
+    // autoResize: true,
+    // width:'200%',
+    // height:'200%',
+    nodes: {
+        size: 2,
+        shape: 'dot',
+        fixed: true,
+    },
+    edges: {
+        smooth: false,
+        color: 'red'
+    },
+    physics: false
+};
 
-    for (let i = 0; i < num; i++) {
-        sq.push([
-            Math.floor(Math.random() * 100) + 1,
-            Math.floor(Math.random() * 80) + 1,
-        ])
-    }
-    return {
-        squares: sq,
-        width: width
-    }
-
-}
 
 const parseInputText = (txt: string) => {
     const lines = txt.trim().split("\n")
-    const [n, w] = lines[0].split(" ").map(v => parseInt(v))
-    let squares = lines.slice(1).map(v => v.split(" ").map(v => parseInt(v)))
+    const n = parseInt(lines[0].trim())
+    let positions = lines.slice(1).map(v => v.split(" ").map(v => parseInt(v)))
     return {
         n,
-        width: w,
-        squares
+        positions
     }
 }
 
-
-const parseOutputText = (txt: string, inputData): ProblemResult => {
+const parseOutputText = (txt: string) => {
     const lines = txt.trim().split("\n")
-    let xy = lines.map(v => v.split(" ").map(v => parseInt(v)))
-    let resPos = []
-    const squares = inputData.squares
-    let max_height = 0
-    for (let i = 0; i < inputData.n; i++) {
-        const top = xy[i][1] + squares[i][1]
-        if (max_height < top) max_height = top;
-        resPos.push([
-            xy[i][0],
-            xy[i][1],
-            squares[i][0],
-            squares[i][1]
+
+    let i = 0;
+    let steps = [];
+    lines.forEach(v => {
+        let line = v.trim();
+        if (line.length == 0) {
+            return
+        }
+        if (line.startsWith('#')) {
+            if (steps.length > 0) {
+                steps[steps.length - 1].comments.push(line)
+            }
+        } else {
+            steps.push({
+                step: steps.length,
+                path: line.split(" ").map(v => parseInt(v.trim())).filter(v => 0 <= v && v <= 10000000),
+                comments: [],
+            })
+        }
+    })
+    return steps;
+}
+
+const generateRandomDataset = (num: number) => {
+    let positions = [];
+    for (let i = 0; i < num; i++) {
+        positions.push([
+            Math.floor(Math.random() * 400),
+            Math.floor(Math.random() * 400),
         ])
     }
     return {
-        height: max_height,
-        width: inputData.width,
-        squares: resPos
+        n: num,
+        positions,
     }
+}
+
+const calcDist = (nodes, path) => {
+    let dist = 0.0;
+    for (let i = 0; i < path.length - 1; i++) {
+        let u = nodes[path[i]];
+        let v = nodes[path[i + 1]];
+        dist += Math.sqrt((u.x - v.x) * (u.x - v.x) + (u.y - v.y) * (u.y - v.y));
+    }
+    return Math.floor(dist * 100) / 100;
 }
 
 /**
@@ -71,75 +91,136 @@ const parseOutputText = (txt: string, inputData): ProblemResult => {
  * などなど
  */
 const Container = () => {
-    const [problemResult, setProblemResult] = useState<ProblemResult>({squares: null, width: 0, height: 0})
     const [inputValue, setInputValue] = useState<string>("")
     const [outputValue, setOutputValue] = useState<string>("")
+    const [network, setNetwork] = useState<any>(null)
+    const [nodes, setNodes] = useState<any>(null)
+    const [steps, setSteps] = useState<any>([])
+    const [playFlg, setPlayFlg] = useState<boolean>(false)
+    const [stepNo, setStepNo] = useState<number>(0)
+    const currentState = () => steps[stepNo]
 
-    const [selAlgo, setSelAlgo] = useState<string>("NF");
-    const [scale, setScale] = useState<number>(1.0);
+    // const [selAlgo, setSelAlgo] = useState<string>("NF");
+    const visJsRef = useRef(null);
+
+
+    const renderPath = (path) => {
+        if (!network) return;
+        let edges = []
+        for (let i = 1; i < path.length; i++) {
+            if (path[i - 1] >= 0 && path[i - 1] < nodes.length && path[i] >= 0 && path[i] < nodes.length) {
+                edges.push({
+                    from: path[i - 1],
+                    to: path[i]
+                })
+            } else {
+                return;
+            }
+        }
+
+        network.setData({edges, nodes})
+        network.fit({maxZoomLevel: 2})
+    }
+    const initNetwork = (nodePositions: Array<any>) => {
+        try {
+            const nodes = nodePositions.map((v, id) => {
+                return {id, label: id.toString(), x: v[0], y: v[1]}
+            })
+
+
+            const network =
+                visJsRef.current &&
+                new Network(visJsRef.current, {nodes, edges: []}, options);
+            network.fit({maxZoomLevel: 2})
+
+            setNetwork(network)
+            setNodes(nodes)
+        } catch (e) {
+            console.log(e)
+        }
+    }
 
     const runSolver = () => {
-        const inp = parseInputText(inputValue);
-        const algo = selAlgo;
-        const algoFnc = {
-            BLF: BLF_solve,
-            NFDH: NFDH_solve,
-            NF: NF_solve,
-        }
-        init().then(() => {
-            const res = algoFnc[algo](inp);
-            console.log(res)
-            const txt = res.pos_list.map(v => v.join(" ")).join("\n")
-            console.log(txt)
-            setOutputValue(txt)
-            bindProblemResult(inputValue, txt)
-        }).catch((e) => {
-            console.log(e)
-            setOutputValue("invalid input")
-        })
     }
 
-    const changeAlgo = (name: string) => {
-        setSelAlgo((v) => name)
+    const changeStep = (steps, step) => {
+        if (steps.length <= step) return
+        setStepNo(step)
+        renderPath(steps[step].path)
     }
 
-    let changeRandomDataset = () => {
-        const dataset = generate_random_dataset(100, 400)
-        let txt = `${dataset.squares.length} ${dataset.width}\n`;
-        const squares = dataset.squares.map(s => `${s[0]} ${s[1]}`).join("\n");
-        txt += squares + "\n"
+    const changeRandomDataset = () => {
+        const dataset = generateRandomDataset(100)
+        let txt = `${dataset.n}\n`
+        const positions = dataset.positions.map(v => `${v[0]} ${v[1]}`).join("\n")
+        txt += positions + "\n"
         setInputValue(txt)
+        initNetwork(dataset.positions)
     }
-    useMountEffect(() => {
-        // runSolver(selAlgo, dataset)
+
+    // useEffect(() => {
+    //     const network =
+    //         visJsRef.current &&
+    //         new Network(visJsRef.current, {nodes, edges}, options);
+    //     setNetwork(network)
+    // }, [visJsRef])
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (playFlg) {
+                if (stepNo + 1 < steps.length) {
+                    renderPath(steps[stepNo + 1].path)
+                    setStepNo((no) => {
+                        return no + 1
+                    })
+                } else {
+                    setPlayFlg(() => false)
+                }
+            }
+        }, 100)
+        return () => clearInterval(interval)
     })
+
 
     const handleChangeInput = (event) => {
         setInputValue(event.target.value)
+        let data = parseInputText(event.target.value)
+        initNetwork(data.positions)
+
+        setPlayFlg(false)
+    }
+    const handleChangeOutput = (event) => {
+        setOutputValue(event.target.value)
+        let steps = parseOutputText(event.target.value)
+        setSteps(steps)
+        changeStep(steps, stepNo)
+
+        setPlayFlg(false)
     }
 
-    const bindProblemResult = (inputText, outputText) => {
+    const handleChangeStep = (event) => {
+        changeStep(steps, Number(event.target.value) || 0)
+
+        setPlayFlg(false)
+    }
+    const handleClickPlay = () => {
+        setPlayFlg(true)
+    };
+
+    /* render values */
+    const input_placeholder = "N \nx1 y1\nx2 y2"
+    const output_placeholder = "x1 y1\nx2 y2"
+    const comment = currentState() ? currentState().comments.join("\n") : ''
+
+    const dist = () => {
+        if (!currentState()) return -1;
         try {
-            const inp = parseInputText(inputValue)
-            const parseData = parseOutputText(outputText, inp)
-            console.log(parseData)
-            setProblemResult(parseData)
+            return calcDist(nodes, currentState().path)
         } catch (e) {
-            setProblemResult({height: 0, width: 0, squares: []})
-            console.log(e);
+            return -1
         }
     }
 
-    const handleChangeOutput = (event) => {
-        setOutputValue(event.target.value)
-        let txt: string = event.target.value;
-        txt = txt.trim();
-        if (!txt || txt.length === 0) return
-
-        bindProblemResult(inputValue, event.target.value)
-    }
-    const input_placeholder = "N W\nw1 h1\nw2 h2"
-    const output_placeholder = "x1 y1\nx2 y2"
 
     return (
         <>
@@ -150,7 +231,7 @@ const Container = () => {
                             <div>
                                 <label htmlFor="inp">入力データ</label>
                                 (<a
-                                href={"https://github.com/tanakanotarou2/rust-rectangle-tsumekomi/blob/main/docs/mondai.md#%E5%85%A5%E5%87%BA%E5%8A%9B"}>入出力説明</a>)
+                                href={"https://github.com/tanakanotarou2/rust-tsp/blob/main/docs/mondai.md#%E5%85%A5%E5%87%BA%E5%8A%9B"}>入出力説明</a>)
                             </div>
                             <textarea id="inp"
                                       name="inp"
@@ -170,55 +251,71 @@ const Container = () => {
                         ></textarea>
                     </div>
                 </div>
-                <div className="solver">
-                    <h3>ソルバー</h3>
-                    <label>
-                        <input
-                            name="algo"
-                            type="radio"
-                            onChange={() => changeAlgo("NF")}
-                            value="NF"
-                            checked={selAlgo === "NF"}
-                        />
-                        NF法
-                    </label>
-                    <label>
-                        <input
-                            name="algo"
-                            type="radio"
-                            value="NFDH"
-                            checked={selAlgo === "NFDH"}
-                            onChange={() => changeAlgo("NFDH")}
-                        />
-                        NFDH法
-                    </label>
-                    <label>
-                        <input
-                            name="algo"
-                            type="radio"
-                            value="BLF"
-                            checked={selAlgo === "BLF"}
-                            onChange={() => changeAlgo("BLF")
-                            }
-                        />
-                        BLF法
-                    </label>
-                    <button onClick={runSolver}>ソルバー実行</button>
-                </div>
+                {/*<div className="solver">*/}
+                {/*    <h3>ソルバー</h3>*/}
+                {/*    <label>*/}
+                {/*        <input*/}
+                {/*            name="algo"*/}
+                {/*            type="radio"*/}
+                {/*            onChange={() => changeAlgo("NF")}*/}
+                {/*            value="NF"*/}
+                {/*            checked={selAlgo === "NF"}*/}
+                {/*        />*/}
+                {/*        NF法*/}
+                {/*    </label>*/}
+                {/*    <label>*/}
+                {/*        <input*/}
+                {/*            name="algo"*/}
+                {/*            type="radio"*/}
+                {/*            value="NFDH"*/}
+                {/*            checked={selAlgo === "NFDH"}*/}
+                {/*            onChange={() => changeAlgo("NFDH")}*/}
+                {/*        />*/}
+                {/*        NFDH法*/}
+                {/*    </label>*/}
+                {/*    <label>*/}
+                {/*        <input*/}
+                {/*            name="algo"*/}
+                {/*            type="radio"*/}
+                {/*            value="BLF"*/}
+                {/*            checked={selAlgo === "BLF"}*/}
+                {/*            onChange={() => changeAlgo("BLF")*/}
+                {/*            }*/}
+                {/*        />*/}
+                {/*        BLF法*/}
+                {/*    </label>*/}
+                {/*    <button onClick={runSolver}>ソルバー実行</button>*/}
+                {/*</div>*/}
             </div>
             {/* end left panel */}
             <div>
                 <div className={"canvas-header"}>
-                    <div className={'label'}>height: {problemResult.height}</div>
                     <div>
-                        <label>scale: </label>
-                        <input type="number" placeholder="1.0" step="0.05" min="0.25" max="5.0"
-                               value={scale}
-                               onChange={(v) => setScale(() => Number(v.target.value))}
+                        <label htmlFor={'step'}>step</label>
+                        <input name={'step'} type={'range'} value={stepNo} min={0}
+                               max={steps.length - 1}
+                               style={{width: '200px'}}
+                               onChange={handleChangeStep}
                         />
+                        <input type="number" placeholder="0" min={0}
+                               value={stepNo}
+                               onChange={handleChangeStep}
+                        />
+                        <button onClick={handleClickPlay}>Play</button>
+                    </div>
+                    <div>
+                        <div className={'label'}>dist: {dist()}</div>
                     </div>
                 </div>
-                <Canvas scale={scale} {...problemResult}/>
+                <div className={"canvas-body"}>
+                    <div ref={visJsRef} style={{height: '800px', width: '800px', minWidth: '800px'}}/>
+                </div>
+                <div className={"canvas-comment"}>
+                    <textarea style={{height: '50px', width: '800px'}}
+                              placeholder={"comments"}
+                              readOnly={true} value={comment}></textarea>
+
+                </div>
             </div>
         </>
     )
