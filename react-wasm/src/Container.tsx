@@ -18,7 +18,8 @@ const options = {
     edges: {
         smooth: false,
         color: 'red'
-    }
+    },
+    physics: false
 };
 
 
@@ -49,7 +50,7 @@ const parseOutputText = (txt: string) => {
         } else {
             steps.push({
                 step: steps.length,
-                path: line.split(" ").map(v => parseInt(v)),
+                path: line.split(" ").map(v => parseInt(v.trim())).filter(v => 0 <= v && v <= 10000000),
                 comments: [],
             })
         }
@@ -61,8 +62,8 @@ const generateRandomDataset = (num: number) => {
     let positions = [];
     for (let i = 0; i < num; i++) {
         positions.push([
-            Math.floor(Math.random() * 800),
-            Math.floor(Math.random() * 800),
+            Math.floor(Math.random() * 400),
+            Math.floor(Math.random() * 400),
         ])
     }
     return {
@@ -107,9 +108,18 @@ const Container = () => {
         if (!network) return;
         let edges = []
         for (let i = 1; i < path.length; i++) {
-            edges.push({from: path[i - 1], to: path[i]})
+            if (path[i - 1] >= 0 && path[i - 1] < nodes.length && path[i] >= 0 && path[i] < nodes.length) {
+                edges.push({
+                    from: path[i - 1],
+                    to: path[i]
+                })
+            } else {
+                return;
+            }
         }
+
         network.setData({edges, nodes})
+        network.fit({maxZoomLevel: 2})
     }
     const initNetwork = (nodePositions: Array<any>) => {
         try {
@@ -121,6 +131,7 @@ const Container = () => {
             const network =
                 visJsRef.current &&
                 new Network(visJsRef.current, {nodes, edges: []}, options);
+            network.fit({maxZoomLevel: 2})
 
             setNetwork(network)
             setNodes(nodes)
@@ -203,7 +214,11 @@ const Container = () => {
 
     const dist = () => {
         if (!currentState()) return -1;
-        return calcDist(nodes, currentState().path)
+        try {
+            return calcDist(nodes, currentState().path)
+        } catch (e) {
+            return -1
+        }
     }
 
 
