@@ -2,6 +2,7 @@ extern crate console_error_panic_hook;
 
 mod utils;
 mod procon_utils;
+pub mod solver;
 
 use wasm_bindgen::prelude::*;
 
@@ -40,23 +41,23 @@ pub struct SolverInput {
     pub positions: Vec<(usize, usize)>, // x,y
 }
 
-pub fn solve<F: Fn(&Input) -> Vec<(usize, usize)>>(jsVal: &JsValue, solver: F) -> JsValue {
-    console_error_panic_hook::set_once(); // エラーがあった場合にログ出力
-    let inp: SolverInput = jsVal.into_serde().unwrap();
-    let mut input = Input {
-        n: inp.n,
-        w: inp.width,
-        a: inp.squares.clone(),
-    };
-
-    let pos = solver(&input);
-
-    let mut res = SolverRes {
-        pos_list: pos.clone()
-    };
-
-    JsValue::from_serde(&res).unwrap()
-}
+// pub fn solve<F: Fn(&Input) -> Vec<(usize, usize)>>(jsVal: &JsValue, solver: F) -> JsValue {
+//     console_error_panic_hook::set_once(); // エラーがあった場合にログ出力
+//     let inp: SolverInput = jsVal.into_serde().unwrap();
+//     let mut input = Input {
+//         n: inp.n,
+//         w: inp.width,
+//         a: inp.squares.clone(),
+//     };
+//
+//     let pos = solver(&input);
+//
+//     let mut res = SolverRes {
+//         pos_list: pos.clone()
+//     };
+//
+//     JsValue::from_serde(&res).unwrap()
+// }
 
 // #[wasm_bindgen]
 // pub fn NF_solve(jsVal: &JsValue) -> JsValue {
