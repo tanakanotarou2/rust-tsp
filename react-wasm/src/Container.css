@@ -56,4 +56,11 @@
 .canvas-header input {
     margin-top: 2px;
     width: 50px;
+
+}
+
+.canvas-body{
+    background: white;
+    max-width: 800px;
+    margin:0 auto;
 }

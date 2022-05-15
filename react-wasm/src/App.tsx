@@ -5,7 +5,7 @@ import Container from "./Container";
 function App() {
     return (
         <div className="App">
-            <h1>長方形詰込み問題</h1>
+            <h1>TSP</h1>
             <div className="App-body">
             <Container/>
             </div>
