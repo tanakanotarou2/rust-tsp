@@ -5,22 +5,6 @@ import {useMountEffect} from "./utils";
 
 import {Network} from "vis-network";
 
-
-const nodes = [
-    {id: 1, label: '1', x: 0, y: 0},
-    {id: 2, label: '2', fixed: true, x: 100, y: 500},
-    {id: 3, title: 'test'},
-    {id: 4},
-    {id: 5},
-];
-
-const edges = [
-    {from: 1, to: 3},
-    {from: 1, to: 2},
-    {from: 2, to: 4},
-    {from: 2, to: 5},
-    {from: 3, to: 3},
-];
 const options = {
     nodes: {
         size: 3,
@@ -28,7 +12,8 @@ const options = {
         fixed: true,
     },
     edges: {
-        smooth: false
+        smooth: false,
+        color:'red'
     }
 };
 
@@ -68,6 +53,21 @@ const parseOutputText = (txt: string) => {
     return steps;
 }
 
+const generateRandomDataset = (num: number) => {
+    let positions=[];
+    for (let i = 0; i < num; i++) {
+        positions.push([
+            Math.floor(Math.random() * 1000),
+            Math.floor(Math.random() * 1000),
+        ])
+    }
+    return {
+        n: num,
+        positions,
+    }
+}
+
+
 /**
  * 全体的な管理を行う
  *
@@ -82,6 +82,8 @@ const Container = () => {
     const [outputValue, setOutputValue] = useState<string>("")
     const [network, setNetwork] = useState<any>(null)
     const [nodes, setNodes] = useState<any>(null)
+    const [step,setStep] = useState<any>(null)
+    const [stateList,setStateList]= useState<any>(null)
 
     // const [selAlgo, setSelAlgo] = useState<string>("NF");
     // const [scale, setScale] = useState<number>(1.0);
@@ -93,13 +95,11 @@ const Container = () => {
         for (let i = 1; i < path.length; i++) {
             edges.push({from: path[i - 1], to: path[i]})
         }
-        // console.log(network)
-        // console.log(network.nodes)
         network.setData({edges, nodes})
     }
-    const initNetwork = (inputData: Array<any>) => {
+    const initNetwork = (nodePositions: Array<any>) => {
         try {
-            const nodes = inputData.map((v, id) => {
+            const nodes = nodePositions.map((v, id) => {
                 return {id, label: id.toString(), x: v[0], y: v[1]}
             })
             const network =
@@ -117,7 +117,12 @@ const Container = () => {
 
 
     let changeRandomDataset = () => {
-        // setInputValue(txt)
+        const dataset=generateRandomDataset(100)
+        let txt=`${dataset.n}\n`
+        const positions=dataset.positions.map(v=>`${v[0]} ${v[1]}`).join("\n")
+        txt += positions + "\n"
+        setInputValue(txt)
+        initNetwork(dataset.positions)
     }
 
     // useEffect(() => {
