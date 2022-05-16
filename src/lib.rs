@@ -60,8 +60,16 @@ pub fn solve<F: Fn(&Input) -> Vec<(usize)>>(jsVal: &JsValue, solver: F) -> JsVal
     JsValue::from_serde(&res).unwrap()
 }
 
+// Nearest Neighbor法
 #[wasm_bindgen]
 pub fn NN_solver(jsVal: &JsValue) -> JsValue {
     console_error_panic_hook::set_once(); // エラーがあった場合にログ出力
     return solve(jsVal, solver::nearest_neighbor_solver);
+}
+
+// 最近追加法
+#[wasm_bindgen]
+pub fn NA_solver(jsVal: &JsValue) -> JsValue {
+    console_error_panic_hook::set_once(); // エラーがあった場合にログ出力
+    return solve(jsVal, solver::nearest_addition_method);
 }

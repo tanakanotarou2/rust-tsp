@@ -3,15 +3,12 @@ import './Container.css';
 
 import {useMountEffect} from "./utils";
 
-import init, {NN_solver} from "rust-tsp";
+import init, {NN_solver, NA_solver} from "rust-tsp";
 
 import {Network} from "vis-network";
 
 /* グラフ設定 */
 const options = {
-    // autoResize: true,
-    // width:'200%',
-    // height:'200%',
     nodes: {
         size: 2,
         shape: 'dot',
@@ -21,6 +18,7 @@ const options = {
         smooth: false,
         color: 'red'
     },
+    // node が fixed の場合は false で良い
     physics: false
 };
 
@@ -151,11 +149,13 @@ const Container = () => {
         const algo = selAlgo;
         const algoFnc = {
             NN: NN_solver,
+            NA: NA_solver,
         }
         init().then(() => {
             const res = algoFnc[algo](inp);
             const txt = res.path.join(" ")
             changeOutput(txt);
+            setOutputValue(txt)
         }).catch((e) => {
             console.log(e)
         })
@@ -195,7 +195,7 @@ const Container = () => {
                     setPlayFlg(() => false)
                 }
             }
-        }, 100)
+        }, 50)
         return () => clearInterval(interval)
     })
 
@@ -291,16 +291,16 @@ const Container = () => {
                         />
                         Nearest Neighbor 法
                     </label>
-                    {/*<label>*/}
-                    {/*    <input*/}
-                    {/*        name="algo"*/}
-                    {/*        type="radio"*/}
-                    {/*        value="NFDH"*/}
-                    {/*        checked={selAlgo === "NFDH"}*/}
-                    {/*        onChange={() => changeAlgo("NFDH")}*/}
-                    {/*    />*/}
-                    {/*    NFDH法*/}
-                    {/*</label>*/}
+                    <label>
+                        <input
+                            name="algo"
+                            type="radio"
+                            value="NA"
+                            checked={selAlgo === "NA"}
+                            onChange={() => setSelAlgo("NA")}
+                        />
+                        最近追加法
+                    </label>
                     {/*<label>*/}
                     {/*    <input*/}
                     {/*        name="algo"*/}
@@ -336,10 +336,10 @@ const Container = () => {
                     </div>
                 </div>
                 <div className={"canvas-body"}>
-                    <div ref={visJsRef} style={{height: '800px', width: '800px', minWidth: '800px'}}/>
+                    <div ref={visJsRef} style={{height: '500px', width: '500px', minWidth: '500px'}}/>
                 </div>
                 <div className={"canvas-comment"}>
-                    <textarea style={{height: '50px', width: '800px'}}
+                    <textarea style={{height: '50px', width: '500px'}}
                               placeholder={"comments"}
                               readOnly={true} value={comment}></textarea>
 

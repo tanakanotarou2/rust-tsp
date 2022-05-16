@@ -42,7 +42,7 @@
     display: flex;
     justify-content: space-between;
     margin: 10px auto;
-    width: 800px;
+    width: 500px;
 }
 
 .canvas-header .label {
@@ -61,6 +61,6 @@
 
 .canvas-body{
     background: white;
-    max-width: 800px;
+    max-width: 500px;
     margin:0 auto;
 }

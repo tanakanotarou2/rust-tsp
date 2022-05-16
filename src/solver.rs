@@ -55,8 +55,8 @@ fn calc_score(path: &Vec<P>) -> f64 {
     tot
 }
 
-fn calc_score2(input:&Input, path_idx: &Vec<usize>) -> f64 {
-    let path=path_idx.iter().map(|&i|input.p[i]).collect_vec();
+fn calc_score2(input: &Input, path_idx: &Vec<usize>) -> f64 {
+    let path = path_idx.iter().map(|&i| input.p[i]).collect_vec();
     calc_score(&path)
 }
 
@@ -86,7 +86,7 @@ pub fn nearest_neighbor_solver(input: &Input) -> Vec<usize> {
     let pos = input.p.clone();
     let mut best = (1e10, vec![]);
 
-    while Timer::get_time() < 10.0
+    while Timer::get_time() < 0.5
     {
         let mut arr = vec![false; N];
 
@@ -139,83 +139,74 @@ impl PartialOrd for Edge {
 
 
 pub fn nearest_addition_method(input: &Input) -> Vec<usize> {
-    let mut rng = rand_pcg::Pcg64Mcg::new(48);
-
-    let N = input.n;
-    let pos = input.p.clone();
-    let mut best = (1e10, vec![]);
-
-
-    while Timer::get_time() < 0.5
-    {
-        // let st = (0..N).choose(&mut rng).unwrap();
-        let st = 0;
-        let mut path = vec![st];
-        let mut arr = vec![false; N];
-        let mut heap = BinaryHeap::new();
-        arr[st] = true;
-
-        let mut pre_node = st;
-        for i in 0..N - 1 {
-            for j in 0..N {
-                if arr[j] { continue; }
-                heap.push(Edge { u: pre_node, v: j, cost: pos[pre_node].distI(&pos[j]) })
-            }
-
-            while let Some(Edge { cost, u, v }) = heap.pop() {
-                if arr[v] { continue; }
-                arr[v] = true;
-
-                // u に v を接続
-                let uidx = path.iter().position(|&x| x == u).unwrap();
-                // 隣接点
-                let left = (uidx + path.len() - 1) % path.len();
-                let right = (uidx + 1) % path.len();
-                let x = path[left];
-                let y = path[right];
-                // let xcost = pos[x].distI(&pos[v]) - pos[x].distI(&pos[u]);
-                // let ycost = pos[y].distI(&pos[v]) - pos[y].distI(&pos[u]);
-                let xcost = pos[x].distI(&pos[v]) - pos[x].distI(&pos[u]);
-                let ycost = pos[y].distI(&pos[v]) - pos[y].distI(&pos[u]);
-                // x-v-u-y とするか、x-u-v-yとするか？
-                if xcost < ycost {
-                    // x と v をつなぐ
-                    path.insert(uidx, v);
-                } else {
-                    path.insert(right, v);
-                }
-                pre_node = v;
-
-                // print_result(&path);
-                // eprintln!("# u, v: {} {}", u,v);
-                // eprintln!("# x, y: {} {}", x,y);
-                // eprintln!("# xcost, ycost: {} {}", xcost,ycost);
-
-                break;
-            }
-        }
-
-        let _path = path.iter().map(|&i| pos[i]).collect_vec();
-        let score = calc_score(&_path);
-        if best.0 > score {
-            best = (score, path);
-            eprintln!("# best score:{}", score);
-        }
-        break;
-    }
-    // println!("{:?}", best.1);
-    // path_to_idx(&input, &best.1)
-    best.1
+    _nearest_addition_method(&input, 0usize)
 }
 
+/* 最近追加法 */
+pub fn _nearest_addition_method(input: &Input, st: usize) -> Vec<usize> {
+    let N = input.n;
+    let pos = input.p.clone();
+
+    let mut path = vec![st];
+    let mut arr = vec![false; N];
+    let mut heap = BinaryHeap::new();
+    arr[st] = true;
+
+    let mut pre_node = st;
+    for i in 0..N - 1 {
+        for j in 0..N {
+            if arr[j] { continue; }
+            heap.push(Edge { u: pre_node, v: j, cost: pos[pre_node].distI(&pos[j]) })
+        }
+
+        while let Some(Edge { cost, u, v }) = heap.pop() {
+            if arr[v] { continue; }
+            arr[v] = true;
+
+            // u に v を接続
+            let uidx = path.iter().position(|&x| x == u).unwrap();
+            // 隣接点
+            let left = (uidx + path.len() - 1) % path.len();
+            let right = (uidx + 1) % path.len();
+            let x = path[left];
+            let y = path[right];
+            let xcost = pos[x].distI(&pos[v]) - pos[x].distI(&pos[u]);
+            let ycost = pos[y].distI(&pos[v]) - pos[y].distI(&pos[u]);
+
+            // x-v-u-y とするか、x-u-v-yとするか？
+            if xcost < ycost {
+                // x と v をつなぐ
+                path.insert(uidx, v);
+            } else {
+                path.insert(right, v);
+            }
+            pre_node = v;
+
+            // print_result(&path);
+            // eprintln!("# u, v: {} {}", u,v);
+            // eprintln!("# x, y: {} {}", x,y);
+            // eprintln!("# xcost, ycost: {} {}", xcost,ycost);
+
+            break;
+        }
+    }
+
+    let _path = path.iter().map(|&i| pos[i]).collect_vec();
+    // println!("{:?}", best.1);
+    // path_to_idx(&input, &best.1)
+    path
+}
+
+
+
 #[cfg(feature = "exp")]
-fn print_result(input:&Input,path: &Vec<usize>) {
-    let score=calc_score2(&input,&path);
+fn print_result(input: &Input, path: &Vec<usize>) {
+    let score = calc_score2(&input, &path);
     println!("{}", score);
 }
 
 #[cfg(not(feature = "exp"))]
-fn print_result(input:&Input,path: &Vec<usize>) {
+fn print_result(input: &Input, path: &Vec<usize>) {
     for i in 0..path.len() - 1 { print!("{} ", path[i]); }
     println!("{}", path[path.len() - 1]);
 }
@@ -225,6 +216,6 @@ pub fn main2() {
     let st = Timer::get_time();
     let res = nearest_neighbor_solver(&input);
     // let res = nearest_addition_method(&input);
-    print_result(&input,&res);
+    print_result(&input, &res);
 }
 
