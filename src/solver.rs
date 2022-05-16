@@ -18,7 +18,7 @@ use crate::procon_utils::Timer;
 pub struct P(pub i32, pub i32);
 
 impl P {
-    fn dist(&self, rhs: &P) -> f64 {
+    fn _dist(&self, rhs: &P) -> f64 {
         let d = self.dist2(rhs);
         (d as f64).sqrt()
     }
@@ -28,7 +28,7 @@ impl P {
         return y * y + x * x;
     }
     fn distI(&self, rhs: &P) -> i64 {
-        (self.dist(rhs) * 1000.0) as i64
+        (self._dist(rhs) * 1000.0) as i64
     }
 }
 
@@ -47,15 +47,16 @@ fn parse_input() -> Input {
     Input { n, p }
 }
 
-fn calc_score(path: &Vec<P>) -> f64 {
-    let mut tot = 0.0;
+fn calc_score(path: &Vec<P>) -> i64 {
+    let mut tot = 0;
     for i in 0..path.len() {
-        tot += path[i].dist(&path[(i + 1) % path.len()])
+        tot += path[i].distI(&path[(i + 1) % path.len()])
     }
     tot
 }
 
-fn calc_score2(input: &Input, path_idx: &Vec<usize>) -> f64 {
+/* ノードの index からコスト計算 */
+fn calc_score2(input: &Input, path_idx: &Vec<usize>) -> i64 {
     let path = path_idx.iter().map(|&i| input.p[i]).collect_vec();
     calc_score(&path)
 }
@@ -84,7 +85,7 @@ pub fn nearest_neighbor_solver(input: &Input) -> Vec<usize> {
     let mut rng = rand_pcg::Pcg64Mcg::new(48);
     let N = input.n;
     let pos = input.p.clone();
-    let mut best = (1e10, vec![]);
+    let mut best = (i64::MAX, vec![]);
 
     while Timer::get_time() < 0.5
     {
@@ -117,6 +118,7 @@ pub fn nearest_neighbor_solver(input: &Input) -> Vec<usize> {
 
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
+use std::mem::swap;
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 struct Edge {
@@ -197,6 +199,54 @@ pub fn _nearest_addition_method(input: &Input, st: usize) -> Vec<usize> {
     path
 }
 
+fn yamanobori2opt(input: &Input) -> Vec<usize> {
+    let mut rng = rand_pcg::Pcg64Mcg::new(48);
+    let N = input.n;
+    let tmp = _nearest_addition_method(&input, 0usize);
+    // let tmp = nearest_neighbor_solver(&input);
+    // let mut tmp = (0..N).collect_vec();
+    // tmp.shuffle(&mut rng);
+
+
+    let pos = tmp.iter().map(|&i| input.p[i]).collect_vec();
+    let mut best = (calc_score2(&input, &tmp), pos);
+
+    let mut iter=0;
+    while Timer::get_time() < 10.0 {
+        iter+=1;
+
+        let mut pos = best.1.clone();
+
+        // 入れ替える 4点 i, j, k, l の選択
+        let mut i = rng.gen_range(0, input.n);
+        let mut k = rng.gen_range(0, input.n);
+        if i > k { swap(&mut i, &mut k) };
+        if i == k || (i + 1) % N == k { continue; }
+        let mut j = (i + 1) % N;
+        let mut l = (k + 1) % N;
+        // コストが下がる
+        let diff =
+            (pos[i].distI(&pos[j]) + pos[k].distI(&pos[l])) -
+                (pos[i].distI(&pos[k]) + pos[j].distI(&pos[l]));
+        // println!("{} {} diff: {}", i,k,diff);
+        if diff > 0 {
+            // [j, k] を反転
+            while j < k {
+                pos.swap(j,k);
+                j += 1;
+                k -= 1;
+            }
+
+            best = (best.0 - diff, pos);
+
+            print_result(&input,&path_to_idx(&input, &best.1));
+            eprintln!("# best:{}", best.0);
+        }
+        // if iter>10{break;}
+    }
+
+    path_to_idx(&input, &best.1)
+}
 
 
 #[cfg(feature = "exp")]
@@ -214,8 +264,9 @@ fn print_result(input: &Input, path: &Vec<usize>) {
 pub fn main2() {
     let input = parse_input();
     let st = Timer::get_time();
-    let res = nearest_neighbor_solver(&input);
+    // let res = nearest_neighbor_solver(&input);
     // let res = nearest_addition_method(&input);
+    let res = yamanobori2opt(&input);
     print_result(&input, &res);
 }
 
