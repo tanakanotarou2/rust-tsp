@@ -199,56 +199,89 @@ pub fn _nearest_addition_method(input: &Input, st: usize) -> Vec<usize> {
     path
 }
 
-fn yamanobori
+// 頂点間の距離リストを作成
+// 空間O(N^2)使うので、必要であれば先頭 k 件のみ残すようにする
+fn gen_dist_list(input: &Input) -> Vec<Vec<(i64, usize)>> {
+    (0..input.n).map(|i| {
+        let mut lst = vec![];
+        for j in 0..input.n {
+            if i == j { continue; }
+            lst.push((input.p[i].distI(&input.p[j]), j));
+        }
+        lst.sort();
+        lst
+    }).collect::<Vec<_>>()
+}
+
 
 fn yamanobori2opt(input: &Input) -> Vec<usize> {
+    let dist_list = gen_dist_list(&input);
+    _yamanobori2opt(input, &dist_list)
+}
+
+fn _yamanobori2opt(input: &Input, dist_lst: &Vec<Vec<(i64, usize)>>) -> Vec<usize> {
     let mut rng = rand_pcg::Pcg64Mcg::new(48);
     let N = input.n;
-    let tmp = _nearest_addition_method(&input, 0usize);
-    // let tmp = nearest_neighbor_solver(&input);
-    // let mut tmp = (0..N).collect_vec();
-    // tmp.shuffle(&mut rng);
+    let path = nearest_neighbor_solver(&input);
+    // let mut path = _nearest_addition_method(&input, 0usize);
+    // pos の index と座標の vectorに
+    let mut path = path.iter().map(|&i| (i, input.p[i])).collect::<Vec<_>>();
 
+    let mut iter = 0;
+    let mut v1_i = 0usize;
+    while Timer::get_time() < 3.0 {
+        iter += 1;
 
-    let pos = tmp.iter().map(|&i| input.p[i]).collect_vec();
-    let mut best = (calc_score2(&input, &tmp), pos);
+        // v1->v2 より小さい v2->v3 とできる辺を探す
+        let v1 = path[v1_i];
+        let v2 = path[(v1_i + 1) % N];
 
-    let mut iter=0;
-    while Timer::get_time() < 2.0 {
-        iter+=1;
+        // v1->v2 とつなぎ変えできるものを探す
+        let f = || -> Option<usize>{
+            for i in 0..dist_lst[v2.0].len() {
+                if dist_lst[v2.0][i].1 == v1.0 { break; }
 
-        let pos = &best.1;
+                let v3_pi = dist_lst[v2.0][i].1;
+                let (v3_i, v3) = path.iter().find_position(|&v| v.0 == v3_pi).unwrap();
+                let v4 = path[(v3_i + 1) % N];
+                if v4.0 == v1.0 { continue; }
 
-        // 入れ替える 4点 i, j, k, l の選択
-        let mut i = rng.gen_range(0, input.n);
-        let mut k = rng.gen_range(0, input.n);
-        if i > k { swap(&mut i, &mut k) };
-        if i == k || (i + 1) % N == k { continue; }
-        let mut j = (i + 1) % N;
-        let mut l = (k + 1) % N;
-        // コストが下がる
-        let diff =
-            (pos[i].distI(&pos[j]) + pos[k].distI(&pos[l])) -
-                (pos[i].distI(&pos[k]) + pos[j].distI(&pos[l]));
-        // println!("{} {} diff: {}", i,k,diff);
-        if diff > 0 {
-            // [j, k] を反転
-            let mut pos=best.1.clone();
-            while j < k {
-                pos.swap(j,k);
-                j += 1;
-                k -= 1;
+                // d(v1,v2) + d(v3,v4) > d(v1,v3) + d(v2,v4)
+                if v1.1.distI(&v2.1) + v3.1.distI(&v4.1) > v1.1.distI(&v3.1) + v2.1.distI(&v4.1) {
+                    return Some(v3_i);
+                }
             }
+            None
+        };
+        if let Some(v3_i) = f() {
 
-            best = (best.0 - diff, pos);
+            // v2 から v3 までを反転
+            let mut l = (v1_i + 1) % N;
+            let mut r = v3_i;
 
-            print_result(&input,&path_to_idx(&input, &best.1));
-            eprintln!("# best:{}", best.0);
+            let v3 = path[r];
+            // println!("# v1{:?} v2:{:?}, v3:{:?}",v1, v2, v3);
+            loop {
+                path.swap(l, r);
+                l = (l + 1) % N;
+                if l == r { break; }
+                r = (r + N - 1) % N;
+                if l == r { break; }
+            }
+            let tmp = path.iter().map(|(i, _)| *i).collect::<Vec<_>>();
+            // print_result(&input, &tmp);
+        } else {};
+
+        v1_i = (v1_i + 1) % N;
+
+        // if iter > 350 { break; }
+        if iter%1000==0{
+            path.reverse();
         }
-        // if iter>10{break;}
     }
+    println!("# iter:{}",iter);
 
-    path_to_idx(&input, &best.1)
+    path.into_iter().map(|(i, _)| i).collect::<Vec<_>>()
 }
 
 
