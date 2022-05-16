@@ -199,6 +199,8 @@ pub fn _nearest_addition_method(input: &Input, st: usize) -> Vec<usize> {
     path
 }
 
+fn yamanobori
+
 fn yamanobori2opt(input: &Input) -> Vec<usize> {
     let mut rng = rand_pcg::Pcg64Mcg::new(48);
     let N = input.n;
@@ -212,10 +214,10 @@ fn yamanobori2opt(input: &Input) -> Vec<usize> {
     let mut best = (calc_score2(&input, &tmp), pos);
 
     let mut iter=0;
-    while Timer::get_time() < 10.0 {
+    while Timer::get_time() < 2.0 {
         iter+=1;
 
-        let mut pos = best.1.clone();
+        let pos = &best.1;
 
         // 入れ替える 4点 i, j, k, l の選択
         let mut i = rng.gen_range(0, input.n);
@@ -231,6 +233,7 @@ fn yamanobori2opt(input: &Input) -> Vec<usize> {
         // println!("{} {} diff: {}", i,k,diff);
         if diff > 0 {
             // [j, k] を反転
+            let mut pos=best.1.clone();
             while j < k {
                 pos.swap(j,k);
                 j += 1;
