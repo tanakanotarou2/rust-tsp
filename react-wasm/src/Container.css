@@ -40,20 +40,26 @@
 
 .canvas-header {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
     margin: 10px auto;
     width: 500px;
+    text-align: left;
 }
 
-.canvas-header .label {
+.step-container {
+    margin-top: 10px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.step-container .label {
     padding: 2px 5px;
-    margin-right: 10px;
     background-color: white;
     color: black;
     min-width: 150px;
 }
 
-.canvas-header input {
+.step-container input {
     margin-top: 2px;
     width: 50px;
 

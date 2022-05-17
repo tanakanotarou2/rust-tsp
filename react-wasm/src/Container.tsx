@@ -74,13 +74,14 @@ const generateRandomDataset = (num: number) => {
 
 const calcDist = (nodes, path) => {
     let dist = 0.0;
-    for (let i = 0; i < path.length; i++) {
+    for (let i = 0; i < path.length - 1; i++) {
         let u = nodes[path[i]];
-        let v = nodes[path[(i + 1)%path.length]];
+        let v = nodes[path[i + 1]];
         dist += Math.sqrt((u.x - v.x) * (u.x - v.x) + (u.y - v.y) * (u.y - v.y));
     }
     return Math.floor(dist * 100) / 100;
 }
+
 
 /**
  * 全体的な管理を行う
@@ -98,18 +99,19 @@ const Container = () => {
     const [steps, setSteps] = useState<any>([])
     const [playFlg, setPlayFlg] = useState<boolean>(false)
     const [stepNo, setStepNo] = useState<number>(0)
-    const currentState = () => steps[stepNo]
-
+    const [loopGraph, setLoopGraph] = useState<boolean>(true)
+    const [graphState, setGraphState] = useState<any>({path: [], comments: [], dist: -1})
     const [selAlgo, setSelAlgo] = useState<string>("NN");
     const visJsRef = useRef(null);
 
 
-    const renderPath = (path) => {
+    const renderPath = (path, loop = loopGraph) => {
         if (!network) return;
         let edges = []
-        for (let i = 0; i < path.length; i++) {
-            let u=i;
-            let v=(i+1)%path.length;
+        const lim = path.length - (loop ? 0 : 1);
+        for (let i = 0; i < lim; i++) {
+            let u = i;
+            let v = (i + 1) % path.length;
             if (path[u] >= 0 && path[u] < nodes.length && path[v] >= 0 && path[v] < nodes.length) {
                 edges.push({
                     from: path[u],
@@ -128,8 +130,6 @@ const Container = () => {
             const nodes = nodePositions.map((v, id) => {
                 return {id, label: id.toString(), x: v[0], y: v[1]}
             })
-
-
             const network =
                 visJsRef.current &&
                 new Network(visJsRef.current, {nodes, edges: []}, options);
@@ -161,10 +161,27 @@ const Container = () => {
         })
     }
 
+    const _calcDist = (path, loop) => {
+        try {
+            if (loop) {
+                path = path.slice()
+                path.push(path[0])
+            }
+            return calcDist(nodes, path)
+        } catch (e) {
+            console.log(e)
+            return -1
+        }
+    }
+
     const changeStep = (steps, step) => {
         if (steps.length <= step) return
         setStepNo(step)
         renderPath(steps[step].path)
+        let state = Object.assign({}, steps[step])
+        state.comments = steps[step].comments.join("\n");
+        state.dist = _calcDist(steps[step].path, loopGraph)
+        setGraphState(state)
     }
 
     const changeRandomDataset = () => {
@@ -237,18 +254,15 @@ const Container = () => {
     /* render values */
     const input_placeholder = "N \nx1 y1\nx2 y2"
     const output_placeholder = "x1 y1\nx2 y2"
-    const comment = currentState() ? currentState().comments.join("\n") : ''
 
-    const dist = () => {
-        if (!currentState()) return -1;
-        try {
-            return calcDist(nodes, currentState().path)
-        } catch (e) {
-            console.log(e)
-            return -1
-        }
-    }
-
+    let handleChangeGraphLoop = (e) => {
+        const checked = e.target.checked;
+        let state = Object.assign({}, graphState);
+        state['dist'] = _calcDist(state.path, checked);
+        setGraphState(state);
+        setLoopGraph(checked);
+        renderPath(state.path,checked)
+    };
 
     return (
         <>
@@ -319,20 +333,34 @@ const Container = () => {
             <div>
                 <div className={"canvas-header"}>
                     <div>
-                        <label htmlFor={'step'}>step</label>
-                        <input name={'step'} type={'range'} value={stepNo} min={0}
-                               max={steps.length - 1}
-                               style={{width: '200px'}}
-                               onChange={handleChangeStep}
+                        <input type="checkbox" id={'chk_loop'}
+                               onChange={handleChangeGraphLoop}
+                               checked={loopGraph}
                         />
-                        <input type="number" placeholder="0" min={0}
-                               value={stepNo}
-                               onChange={handleChangeStep}
-                        />
-                        <button onClick={handleClickPlay}>Play</button>
+                        <label htmlFor={'chk_loop'}
+                               style={{paddingRight: '15px'}}
+                        >始点と終点に辺をはる</label>
                     </div>
-                    <div>
-                        <div className={'label'}>dist: {dist()}</div>
+                    <div className={"step-container"}>
+                        <div>
+                            <label htmlFor={'step'}>step</label>
+                            <input name={'step'} type={'range'} value={stepNo} min={0}
+                                   max={steps.length - 1}
+                                   style={{width: '150px'}}
+                                   onChange={handleChangeStep}
+                            />
+                            <input type="number" placeholder="0" min={0}
+                                   value={stepNo}
+                                   style={{marginRight: '5px'}}
+                                   onChange={handleChangeStep}
+                            />
+                            <button onClick={handleClickPlay}>Play</button>
+                        </div>
+                        <div>
+                            <div>
+                                <div className={'label'}>dist: {graphState.dist}</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div className={"canvas-body"}>
@@ -341,8 +369,7 @@ const Container = () => {
                 <div className={"canvas-comment"}>
                     <textarea style={{height: '50px', width: '500px'}}
                               placeholder={"comments"}
-                              readOnly={true} value={comment}></textarea>
-
+                              readOnly={true} value={graphState.comments}></textarea>
                 </div>
             </div>
         </>
