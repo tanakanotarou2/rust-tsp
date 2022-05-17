@@ -73,3 +73,9 @@ pub fn NA_solver(jsVal: &JsValue) -> JsValue {
     console_error_panic_hook::set_once(); // エラーがあった場合にログ出力
     return solve(jsVal, solver::nearest_addition_method);
 }
+// 2opt法
+#[wasm_bindgen]
+pub fn two_opt_solver(jsVal: &JsValue) -> JsValue {
+    console_error_panic_hook::set_once(); // エラーがあった場合にログ出力
+    return solve(jsVal, solver::yamanobori2opt);
+}

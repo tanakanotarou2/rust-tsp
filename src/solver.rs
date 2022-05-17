@@ -249,12 +249,10 @@ fn double_bridge(path: &Vec<usize>, rng: &mut rand_pcg::Pcg64Mcg) -> Vec<usize> 
 }
 
 const TIME_LIMIT:f64=1.5;
-fn yamanobori2opt(input: &Input) -> Vec<usize> {
+pub fn yamanobori2opt(input: &Input) -> Vec<usize> {
     let mut rng = rand_pcg::Pcg64Mcg::new(48);
     let dist_list = gen_dist_list(&input);
     let mut path = nearest_neighbor_solver(&input);
-    // let mut path = nearest_addition_method(&input);
-    // print_result(&input, &path);
     let mut best = (calc_score2(&input, &path), path.clone());
 
     while Timer::get_time() < TIME_LIMIT {

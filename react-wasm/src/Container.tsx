@@ -3,7 +3,7 @@ import './Container.css';
 
 import {useMountEffect} from "./utils";
 
-import init, {NN_solver, NA_solver} from "rust-tsp";
+import init, {NN_solver, NA_solver, two_opt_solver} from "rust-tsp";
 
 import {Network} from "vis-network";
 
@@ -150,6 +150,7 @@ const Container = () => {
         const algoFnc = {
             NN: NN_solver,
             NA: NA_solver,
+            '2opt': two_opt_solver,
         }
         init().then(() => {
             const res = algoFnc[algo](inp);
@@ -261,7 +262,7 @@ const Container = () => {
         state['dist'] = _calcDist(state.path, checked);
         setGraphState(state);
         setLoopGraph(checked);
-        renderPath(state.path,checked)
+        renderPath(state.path, checked)
     };
 
     return (
@@ -315,17 +316,17 @@ const Container = () => {
                         />
                         最近追加法
                     </label>
-                    {/*<label>*/}
-                    {/*    <input*/}
-                    {/*        name="algo"*/}
-                    {/*        type="radio"*/}
-                    {/*        value="BLF"*/}
-                    {/*        checked={selAlgo === "BLF"}*/}
-                    {/*        onChange={() => changeAlgo("BLF")*/}
-                    {/*        }*/}
-                    {/*    />*/}
-                    {/*    BLF法*/}
-                    {/*</label>*/}
+                    <label>
+                        <input
+                            name="algo"
+                            type="radio"
+                            value="2opt"
+                            checked={selAlgo === "2opt"}
+                            onChange={() => setSelAlgo("2opt")
+                            }
+                        />
+                        2-opt法
+                    </label>
                     <button onClick={runSolver}>ソルバー実行</button>
                 </div>
             </div>
