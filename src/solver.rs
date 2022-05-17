@@ -213,23 +213,84 @@ fn gen_dist_list(input: &Input) -> Vec<Vec<(i64, usize)>> {
     }).collect::<Vec<_>>()
 }
 
-
-fn yamanobori2opt(input: &Input) -> Vec<usize> {
-    let dist_list = gen_dist_list(&input);
-    _yamanobori2opt(input, &dist_list)
+fn double_bridge(path: &Vec<usize>, rng: &mut rand_pcg::Pcg64Mcg) -> Vec<usize> {
+    let N = path.len();
+    for _ in 0..1000 {
+        let mut lst = (0..4).map(|_| rng.gen_range(0, path.len())).sorted().collect::<Vec<_>>();
+        let mut ng = false;
+        for i in 0..4 {
+            if lst[i] == lst[(i + 1) % 4] { ng = true; }
+            if (lst[i] + 1) % N == lst[(i + 1) % 4] { ng = true; }
+        }
+        if !ng {
+            // eprintln!("# {:?}", lst);
+            let v11 = lst[0];
+            let v12 = (lst[0] + 1) % N;
+            let v21 = lst[1];
+            let v22 = (lst[1] + 1) % N;
+            let v31 = lst[2];
+            let v32 = (lst[2] + 1) % N;
+            let v41 = lst[3];
+            let v42 = (lst[3] + 1) % N;
+            let ids = [(v12, v21), (v42, v11), (v32, v41), (v22, v31)];
+            let mut res = vec![];
+            for (l, r) in ids {
+                let mut i = l;
+                res.push(path[i]);
+                while i != r {
+                    i = (i + 1) % N;
+                    res.push(path[i]);
+                }
+            }
+            return res;
+        }
+    }
+    return path.clone();
 }
 
-fn _yamanobori2opt(input: &Input, dist_lst: &Vec<Vec<(i64, usize)>>) -> Vec<usize> {
+const TIME_LIMIT:f64=1.5;
+fn yamanobori2opt(input: &Input) -> Vec<usize> {
     let mut rng = rand_pcg::Pcg64Mcg::new(48);
+    let dist_list = gen_dist_list(&input);
+    let mut path = nearest_neighbor_solver(&input);
+    // let mut path = nearest_addition_method(&input);
+    // print_result(&input, &path);
+    let mut best = (calc_score2(&input, &path), path.clone());
+
+    while Timer::get_time() < TIME_LIMIT {
+        for _ in 0..2 {
+            path = _opt2(input, &path, &dist_list);
+            path.reverse();
+        }
+        let score = calc_score2(&input, &path);
+        if best.0 > score {
+            best = (score, path.clone());
+
+            print_result(&input, &path);
+            path = double_bridge(&path, &mut rng);
+            print_result(&input, &path);
+        } else {
+            path = double_bridge(&path, &mut rng);
+        }
+    }
+    best.1
+}
+
+fn _opt2(input: &Input,
+         init_path: &Vec<usize>,
+         dist_lst: &Vec<Vec<(i64, usize)>>) -> Vec<usize> {
+    // let mut rng = rand_pcg::Pcg64Mcg::new(48);
     let N = input.n;
-    let path = nearest_neighbor_solver(&input);
-    // let mut path = _nearest_addition_method(&input, 0usize);
+
     // pos の index と座標の vectorに
-    let mut path = path.iter().map(|&i| (i, input.p[i])).collect::<Vec<_>>();
+    let mut path = init_path.iter().map(|&i| (i, input.p[i])).collect::<Vec<_>>();
 
     let mut iter = 0;
     let mut v1_i = 0usize;
-    while Timer::get_time() < 3.0 {
+
+    let mut alive = vec![true; N];
+
+    while Timer::get_time() < TIME_LIMIT {
         iter += 1;
 
         // v1->v2 より小さい v2->v3 とできる辺を探す
@@ -262,6 +323,9 @@ fn _yamanobori2opt(input: &Input, dist_lst: &Vec<Vec<(i64, usize)>>) -> Vec<usiz
             let v3 = path[r];
             // println!("# v1{:?} v2:{:?}, v3:{:?}",v1, v2, v3);
             loop {
+                alive[path[l].0] = true;
+                alive[path[r].0] = true;
+
                 path.swap(l, r);
                 l = (l + 1) % N;
                 if l == r { break; }
@@ -270,16 +334,22 @@ fn _yamanobori2opt(input: &Input, dist_lst: &Vec<Vec<(i64, usize)>>) -> Vec<usiz
             }
             let tmp = path.iter().map(|(i, _)| *i).collect::<Vec<_>>();
             // print_result(&input, &tmp);
-        } else {};
+        } else {
+            alive[v1.0] = false;
+        };
 
-        v1_i = (v1_i + 1) % N;
+        {
+            let mut nxt = (v1_i + 1) % N;
+            while nxt != v1_i {
+                if alive[path[nxt].0] { break; }
+                nxt = (nxt + 1) % N;
+            }
+            if nxt == v1_i { break; }
 
-        // if iter > 350 { break; }
-        if iter%1000==0{
-            path.reverse();
+            v1_i = nxt;
         }
     }
-    println!("# iter:{}",iter);
+    // eprintln!("# iter:{}", iter);
 
     path.into_iter().map(|(i, _)| i).collect::<Vec<_>>()
 }
